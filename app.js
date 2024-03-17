@@ -108,6 +108,16 @@ app.use(cors({ origin: "*", methods: "GET,HEAD,PUT,PATCH,POST,DELETE" }));
 
 const PORT = process.env.PORT || 5000;
 
+const connectedUsers = new Map();
+let peerConnectedUser = new Map();
+const robotLivestatus = new Map()
+/**
+ * @type {Map<string,[string]>}
+ */
+let rooms = new Map();
+// it contain all the userId : socket id
+const connectedTebo = new Map();
+
 const validateRequestMiddleware = (req, res, next) => {
   const { sessionName, role, sessionKey, userIdentity } = req.body;
   if (!sessionName || !role || !sessionKey || !userIdentity) {
@@ -132,6 +142,15 @@ app.post("/generateSignature", generateSignatureMiddleware, (req, res) => {
   res.json({ signature: req.signature });
 });
 
+app.get("/getRobotLiveStatus", (req, res) => {
+  const myObject = {};
+  robotLivestatus.forEach((value, key) => {
+    myObject[key] = value;
+});
+   console.log(myObject,"📺📺📺📺");
+   
+    res.json({ robotStatus: myObject });
+  });
 app.use((err, req, res, next) => {
   // console.log({ body: req.body });
   // console.error(err.stack);
@@ -141,14 +160,7 @@ app.use((err, req, res, next) => {
 // app.post("/zego",
 //   ZigoClient
 // );
-const connectedUsers = new Map();
-let peerConnectedUser = new Map();
-/**
- * @type {Map<string,[string]>}
- */
-let rooms = new Map();
-// it contain all the userId : socket id
-const connectedTebo = new Map();
+
 
 /**
  *
@@ -186,7 +198,7 @@ io.on("connection", (socket) => {
   socket.on("call", (data) => {
     let calleeId = data.calleeId;
     let rtcMessage = data.rtcMessage;
-    console.log({ rtcMessage }, "*********");
+    // console.log({ rtcMessage }, "*********");
     let roomId = data.roomId;
     //  let isRoomexist = rooms.has(roomId)
     //  if(!isRoomexist){
@@ -198,7 +210,7 @@ io.on("connection", (socket) => {
     // console.log(2, rooms);
     socket.to(calleeId).emit("newCall", {
       callerId: socket.user,
-      rtcMessage: rtcMessage,
+      // rtcMessage: rtcMessage,
       roomId,
     });
   });
@@ -252,11 +264,6 @@ io.on("connection", (socket) => {
     io.to(socketId).emit("CredentialAcknowledgement", acknowledgementData.status);
   });
 
-
-
-  
-
-
   socket.on("sentToPhone", (mobileLogData) => {
     let  acknowledgementId = mobileLogData.id
     let getKeyOfTebo = getKeyByValue(peerConnectedUser, acknowledgementId);
@@ -275,18 +282,13 @@ io.on("connection", (socket) => {
     // socket.broadcast.emit("callEnded");
     connectedUsers.forEach((value, key) => {
       if (value === socket.id) {
-        // console.log(
-        //   key,
-        //   "dsd",
-        //   peerConnectedUser,
-        //   { connectedUsers },
-        //   { connectedTebo }
-        // );
+        
         rooms.forEach((partcpnts, roomId) => {
           // console.log(partcpnts,roomId,connectedUsers,{rooms},key,"oooooo");
           const isUserinRoom = partcpnts.some((p) => p === key);
           if (isUserinRoom) {
             partcpnts.forEach((pid) => {
+              console.log(connectedTebo.get(pid),"connectedTebo.get(pid)");
               io.to(connectedUsers.get(pid) || connectedTebo.get(pid)).emit(
                 "participantLeft",
                 {
@@ -310,7 +312,10 @@ io.on("connection", (socket) => {
 
     connectedTebo.forEach((value, key) => {
       if (value === socket.id) {
+        robotLivestatus.delete(key);
+          io.sockets.emit("liveStatus",{TeboUserId:key,status:false})
         console.log({ value }, { key }, { socket: socket.id });
+        
         if (key.startsWith("TEBO")) {
           axios
             .post(baseApiUrl + onlineStatusUpdate, {
@@ -510,13 +515,13 @@ io.on("connection", (socket) => {
     // console.log(`Received MQTT message from topic '${topic}': ${payload}`);
   });
 
-  client.subscribe("Devlacus/Tebo/+/info/robotState", (err) => {
-    if (err) {
-      console.error("Failed to subscribe to robotState topic:", err);
-    } else {
-      console.log("Successfully subscribed to robotState topic");
-    }
-  });
+  // client.subscribe("Devlacus/Tebo/+/info/robotState", (err) => {
+  //   if (err) {
+  //     console.error("Failed to subscribe to robotState topic:", err);
+  //   } else {
+  //     console.log("Successfully subscribed to robotState topic");
+  //   }
+  // });
 
   socket.on("confirmuser", (payload) => {
     // console.log("Received confirmuser event:", payload);
@@ -845,7 +850,19 @@ io.on("connection", (socket) => {
       }
     );
   });
+  socket.on('onlineUserData',(onlineRes)=>{
+    robotLivestatus.set(onlineRes.TeboUserId,onlineRes.status)
+    
+  })
+  socket.on('onlineStatusUpdate',(onlineRes)=>{
+    console.log('testing:',{onlineRes});
+    robotLivestatus.set(onlineRes.TeboUserId,onlineRes.status)
+    io.sockets.emit("liveStatus",onlineRes)
+    
+    console.log({robotLivestatus});
+  })
 
+  
   // Goto Meeting End
   socket.on("meeting-end", (payload) => {
     const data = payload?.data?.toString();
