@@ -5,9 +5,9 @@ const generateSignat = async ()=>{
 }
 const generateSignatureMiddleware = async(req, res, next) => {
     console.log({body:req});
-    const { sessionName, role, sessionKey, userIdentity } = req.body;
-    const sdkKey = process.env.ZOOM_VIDEO_SDK_KEY;
-    const sdkSecret = process.env.ZOOM_VIDEO_SDK_SECRET;
+    const { sessionName, role, sessionKey, userIdentity,sdkKey,sdkSecret } = req.body;
+    // const sdkKey = process.env.ZOOM_VIDEO_SDK_KEY;
+    // const sdkSecret = process.env.ZOOM_VIDEO_SDK_SECRET;
   
     const iat = Math.round(new Date().getTime() / 1000) - 30;
     const exp = iat + 60 * 60 * 2;
