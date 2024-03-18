@@ -197,7 +197,7 @@ io.on("connection", (socket) => {
   let userExisit = false;
   socket.on("call", (data) => {
     let calleeId = data.calleeId;
-    let rtcMessage = data.rtcMessage;
+    // let rtcMessage = data.rtcMessage;
     // console.log({ rtcMessage }, "*********");
     let roomId = data.roomId;
     //  let isRoomexist = rooms.has(roomId)
@@ -217,7 +217,7 @@ io.on("connection", (socket) => {
 
   socket.on("answerCall", (data) => {
     let callerId = data.callerId;
-    rtcMessage = data.rtcMessage;
+    // rtcMessage = data.rtcMessage;
     const roomId = data.roomId;
     // console.log(3, { roomId });
 
@@ -227,7 +227,7 @@ io.on("connection", (socket) => {
     // console.log(5, { room });
     socket.to(callerId).emit("callAnswered", {
       callee: socket.user,
-      rtcMessage: rtcMessage,
+      // rtcMessage: rtcMessage,
     });
   });
 
